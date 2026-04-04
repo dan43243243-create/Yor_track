@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Карьерный Дашборд МТС</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --mts-red: #E30613;
+            --mts-red-hover: #c20510;
+            --text-main: #333333;
+            --text-gray: #7A7A7A;
+            --bg-gray: #F5F5F5;
+            --green-skill: #00B350;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: #E5E5E5;
+            display: flex; justify-content: center;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .app-container {
+            width: 100%; max-width: 450px; height: 100vh;
+            background-color: white; position: relative;
+            display: flex; flex-direction: column;
+        }
+
+        #scroll-area {
+            flex: 1; overflow-y: auto; padding-bottom: 80px;
+            scroll-behavior: smooth;
+        }
+
+        /* --- ИСПРАВЛЕНИЯ ТУТ --- */
+        /* Использование Grid вместо Flex для стабильности */
+        .profile-card {
+            background-color: var(--mts-red); color: white;
+            padding: 30px 20px; border-radius: 0 0 25px 25px;
+            display: grid;
+            grid-template-columns: 80px 1fr; /* Фиксированная колонка для диаграммы, текст в остатке */
+            align-items: center;
+            gap: 15px; /* Немного уменьшили отступ */
+        }
+
+        /* Добавлены min-width/height и aspect-ratio, чтобы круг оставался кругом */
+        .donut-chart {
+            width: 80px;
+            height: 80px;
+            min-width: 80px; /* Важно: не даем сжать */
+            min-height: 80px; /* Важно */
+            aspect-ratio: 1 / 1; /* Гарантия круга */
+            border-radius: 50%;
+            background: conic-gradient(white 0% 0%, rgba(255,255,255,0.3) 0% 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: 0.5s;
+        }
+
+        /* Текст внутри круга теперь позиционируется стабильнее */
+        .donut-inner {
+            width: 60px;
+            height: 60px;
+            background-color: var(--mts-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            position: absolute; /* Абсолютное позиционирование для точности */
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%); /* Центрирование */
+        }
+        /* --- КОНЕЦ ИСПРАВЛЕНИЙ --- */
+
+        /* Остальной код без изменений */
+        .bottom-bar {
+            position: absolute; bottom: 0; width: 100%; height: 70px;
+            background: white; display: flex; justify-content: space-around;
+            align-items: center; border-top: 1px solid #eee; z-index: 10;
+        }
+
+        .nav-item {
+            text-decoration: none; color: var(--text-gray);
+            font-size: 12px; display: flex; flex-direction: column; align-items: center;
+            cursor: pointer;
+        }
+
+        .nav-item.active { color: var(--mts-red); font-weight: bold; }
+        .nav-icon { font-size: 20px; margin-bottom: 4px; }
+
+        .content-section { scroll-margin-top: 20px; }
+
+        .card {
+            background: white; padding: 15px; border-radius: 12px;
+            margin-bottom: 10px; display: flex; align-items: center;
+            gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: 0.3s; cursor: pointer;
+        }
+
+        .cb {
+            min-width: 22px; height: 22px; border: 2px solid var(--mts-red);
+            border-radius: 6px; display: flex; align-items: center;
+            justify-content: center; background: transparent;
+            transition: background 0.2s;
+        }
+        .cb.is-checked {
+            background-color: var(--mts-red) !important;
+        }
+        .card.is-completed {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div id="scroll-area">
+        <div id="profile" class="content-section profile-card">
+            <div class="donut-chart">
+                <div class="donut-inner score-value">0%</div>
+            </div>
+            <div>
+                <h1 style="margin: 0; font-size: 22px;">{{ user.name }}</h1>
+                <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">{{ user.role }}</p>
+                <p style="margin: 5px 0 0; font-size: 12px; opacity: 0.8;">📍 {{ user.city }} | 💰 {{ user.salary }}</p>
+            </div>
+        </div>
+
+        <div id="path" class="content-section" style="margin-top: 20px; padding: 0 15px;">
+            <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--text-main);">🛤 Твой путь развития</h2>
+            <div id="plan-container"></div>
+        </div>
+
+        <div id="works" class="content-section" style="margin-top: 20px; padding: 0 15px; padding-bottom: 100px;">
+            <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--text-main);">💼 Рекомендуемые проекты</h2>
+            <div id="projects-container"></div>
+        </div>
+    </div>
+
+    <nav class="bottom-bar">
+        <div class="nav-item active" onclick="setActiveNav(this, 'profile')">
+            <span class="nav-icon">🏠</span><span>Профиль</span>
+        </div>
+        <div class="nav-item" onclick="setActiveNav(this, 'path')">
+            <span class="nav-icon">🛤</span><span>Путь</span>
+        </div>
+        <div class="nav-item" onclick="setActiveNav(this, 'works')">
+            <span class="nav-icon">💼</span><span>Работы</span>
+        </div>
+    </nav>
+</div>
+
+<script>
+    const userId = "{{ user.user_id }}";
+    const savedProgress = {{ progress | tojson }};
+
+    function renderList(rawText, containerId, prefix) {
+        const container = document.getElementById(containerId);
+        if (!rawText || rawText.trim() === "" || rawText.includes("Данные формируются")) {
+            container.innerHTML = '<p style="color:gray; font-size:14px;">Данные скоро появятся...</p>';
+            return;
+        }
+
+        const items = rawText.split('\n')
+            .map(line => line.replace(/^[\s\d.#"'-]+/, '').trim())
+            .filter(line => line.length > 5);
+
+        items.forEach((text, idx) => {
+            const taskId = `${prefix}_${idx}`;
+            const isDone = savedProgress[taskId] || false;
+
+            const card = document.createElement('div');
+            card.className = `card ${isDone ? 'is-completed' : ''}`;
+
+            card.innerHTML = `
+                <div class="cb ${isDone ? 'is-checked' : ''}" id="cb_${taskId}">
+                    <span class="check-mark" style="color:white; font-size:14px; display: ${isDone ? 'block' : 'none'}">✓</span>
+                </div>
+                <span style="font-size: 14px; color: var(--text-main);">${text}</span>
+            `;
+
+            card.onclick = () => toggleTask(taskId, card);
+            container.appendChild(card);
+        });
+    }
+
+    async function toggleTask(taskId, element) {
+        const cb = element.querySelector('.cb');
+        const mark = element.querySelector('.check-mark');
+
+        const isNowDone = !cb.classList.contains('is-checked');
+
+        if (isNowDone) {
+            cb.classList.add('is-checked');
+            element.classList.add('is-completed');
+            mark.style.display = 'block';
+        } else {
+            cb.classList.remove('is-checked');
+            element.classList.remove('is-completed');
+            mark.style.display = 'none';
+        }
+
+        updateProgressWheel();
+
+        try {
+            await fetch('/update_task', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    user_id: userId,
+                    task_id: taskId,
+                    is_completed: isNowDone
+                })
+            });
+        } catch (e) { console.error("Ошибка сохранения:", e); }
+    }
+
+    function updateProgressWheel() {
+        const allItems = document.querySelectorAll('.cb');
+        const total = allItems.length;
+        const checked = document.querySelectorAll('.cb.is-checked').length;
+
+        const final = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+        const scoreElement = document.querySelector('.score-value');
+        if (scoreElement) scoreElement.innerText = final + '%';
+
+        const chart = document.querySelector('.donut-chart');
+        if (chart) {
+            chart.style.background = `conic-gradient(white 0% ${final}%, rgba(255,255,255,0.2) ${final}% 100%)`;
+        }
+    }
+
+    function setActiveNav(element, targetId) {
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        element.classList.add('active');
+        const targetElement = document.getElementById(targetId);
+        if (targetElement) {
+            targetElement.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    window.onload = () => {
+        renderList(`{{ user.plan }}`, 'plan-container', 'plan');
+        renderList(`{{ user.projects }}`, 'projects-container', 'proj');
+        updateProgressWheel();
+    };
+</script>
+
+</body>
+</html>
